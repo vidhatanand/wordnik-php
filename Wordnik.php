@@ -439,20 +439,21 @@ class Wordnik {
    
    /**
     * Note: you must call authenticate before calling this.
-    * More info: http://developer.wordnik.com/docs#!/wordList/delete_word_list
+    * More info: http://developer.wordnik.com/docs/#!/wordList/update_word_list
+    * wordList object can be obtained using getWordList
     * @param array $params
     *    keys:
     *       wordListId  - required (permalink)
+    *       wordList    - required (wordList Object)
     * @return none 
     */
    public function updateList(array $params = array()) {
-      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
+      $this->validateParams($params, array("wordListId", "wordList"), __FUNCTION__);
       $this->ensureAuthentic();
       $wordListId = $this->popKey($params, "wordListId");
-      $words = $this->popKey($params, "words");
-      $request_body = $this->makeRequestBody($words);
+      $wordList = $this->popKey($params, "wordList");
 
-      return $this->callApi('/wordList.json/' . rawurlencode($wordListId), $params, 'put', $request_body);
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId), $params, 'put', $wordList);
    }
    
    /**
@@ -573,7 +574,7 @@ class Wordnik {
    
    private function validateParams(array $params, array $required, $func_name) {
       foreach($required as $key) {
-         if (!isset($params[$key]) || (!is_array($params[$key]) && trim($params[$key]) == '')) {
+         if (!isset($params[$key]) || (!is_array($params[$key]) && !is_object($params[$key]) && trim($params[$key]) == '')) {
             throw new InvalidArgumentException("$func_name expects $key to be a string");
          }
       }
@@ -598,16 +599,17 @@ class Wordnik {
 
       $curl = curl_init();
       $timeout = 10;
-      curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
-      curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); // return the result on success, rather than just TRUE
-      curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-
       if (!empty($params)) {
          $url = ($url . '?' . http_build_query($params));
       }
       
       $method = strtoupper($method);
-      $encoded_body = (is_array($request_body)) ? json_encode($request_body) : $request_body;
+      $encoded_body = (is_array($request_body) || is_object($request_body)) ? json_encode($request_body) : $request_body;
+
+      curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
+      curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); // return the result on success, rather than just TRUE
+      curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
       if ($method == 'POST') {
          curl_setopt($curl, CURLOPT_POSTFIELDS, $encoded_body);
          curl_setopt($curl, CURLOPT_POST, true);
@@ -616,24 +618,10 @@ class Wordnik {
          curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
       }
       if ($method == 'PUT') {
-         $fp = fopen('php://temp/maxmemory:256000', 'w');
-         if(!fp) {
-            throw new Exception("Could not create file for PUT request");
-         }
-         fwrite($fp,$encoded_body);
-         fseek($fp, 0);
-         
-         $options = array(
-             CURLOPT_BINARYTRANSFER => true,
-             CURLOPT_INFILE => $fp,
-             CURLOPT_INFILESIZE => strlen($encoded_body)
-         );
-         curl_setopt_array($curl, $options);
+         curl_setopt($curl, CURLOPT_POSTFIELDS, $encoded_body);
       }
 
       curl_setopt($curl, CURLOPT_URL, $url);
-
-      curl_setopt($curl, CURLINFO_HEADER_OUT, true);
 
       // make the request
       $response = curl_exec($curl);
