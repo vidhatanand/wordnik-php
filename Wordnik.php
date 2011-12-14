@@ -99,8 +99,8 @@ class Wordnik {
     */
    public function getWordLists(array $params = array()) {
       $this->ensureAuthentic();
-      $params['api_key'] = $this->api_key;
-      $params['auth_token'] = $this->auth_info->token;
+//      $params['api_key'] = $this->api_key;
+//      $params['auth_token'] = $this->auth_info->token;
       
       return $this->callApi('/account.json/wordLists', $params);
    }
@@ -118,8 +118,8 @@ class Wordnik {
    
    public function getUser(array $params = array()) {
       $this->ensureAuthentic();
-      $params['api_key'] = $this->api_key;
-      $params['auth_token'] = $this->auth_info->token;
+//      $params['api_key'] = $this->api_key;
+//      $params['auth_token'] = $this->auth_info->token;
       
       return $this->callApi('/account.json/user', $params);
    }
@@ -432,7 +432,7 @@ class Wordnik {
    public function getWordList(array $params = array()) {
       $this->validateParams($params, array("wordListId"), __FUNCTION__);
       $this->ensureAuthentic();
-      $params['auth_token'] = $this->auth_info->token;
+//      $params['auth_token'] = $this->auth_info->token;
       $wordListId = $this->popKey($params, "wordListId");
       
       return $this->callApi('/wordList.json/' . $wordListId, $params);
@@ -459,20 +459,12 @@ class Wordnik {
          $params['sortOrder'] = 'desc';
       }
       $this->ensureAuthentic();
-      $params['auth_token'] = $this->auth_info->token;
+//      $params['auth_token'] = $this->auth_info->token;
       $wordListId = $this->popKey($params, "wordListId");
       
       return $this->callApi('/wordList.json/' . $wordListId . '/words', $params);
    }
    
-   /*
-    * Add a word to the given list
-    * Note: you must call getAuthToken before calling this.
-    * Required params:
-    *   wordstring : the word to add to the list
-    *   list_permalink : the list's permalink id
-    */
-
    /**
     * More info: http://developer.wordnik.com/docs#!/wordList/add_words_to_word_list
     * @param array $params
@@ -481,46 +473,32 @@ class Wordnik {
     *       words       - required (array of words)
     * @return type 
     */
-//   public function addWordsToList(array $params = array()) {
-//      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
-//      $this->ensureAuthentic();
-//      $wordListId = $this->popKey($params, "wordListId");
+   public function addWordsToList(array $params = array()) {
+      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
+      $this->ensureAuthentic();
+      $wordListId = $this->popKey($params, "wordListId");
 //      $params['auth_token'] = $this->auth_info->token;
-//
-//      return $this->callApi('/wordList.json/' . $wordListId . '/words', $params, 'post');
-//   }
+      $words = $this->popKey($params, "words");
+      $request_body = $this->makeRequestBody($words);
 
-   /*
-    * Create a new list on behalf of the authenticated user.
-    * Note: you must call getAuthToken before calling this.
-    * Required params:
-    *  name : the name of this list
-    *  description : a description about this list
-    * Optional param:
-    *  type : list permissions, either 'PUBLIC' or 'PRIVATE'
-    * More info: http://docs.wordnik.com/api/methods#lists
+      return $this->callApi('/wordList.json/' . $wordListId . '/words', $params, 'post', $request_body);
+   }
+
+   /**
+    * More info: http://developer.wordnik.com/docs#!/wordList/delete_word_list
+    * @param array $params
+    *    keys:
+    *       wordListId  - required (permalink)
+    * @return none 
     */
-
-//   public function createList($name, $description, $type='PUBLIC') {
-//      $this->ensureAuthentic();
-//      $params = array();
-//      $params['name'] = $name;
-//      $params['description'] = $description;
-//      $params['type'] = $type;
-//      return $this->callApi('/wordLists.json/', $params, 'post');
-//   }
-
-   /*
-    * Delete the given list on behalf of the authenticated user.
-    * Note: you must call getAuthToken before calling this.
-    * Required params:
-    *   list_permalink : the list's permalink id
-    */
-
-//   public function deleteList($list_permalink) {
-//      $this->ensureAuthentic();
-//      return $this->callApi('/wordList.json/' . $list_permalink, null, 'delete');
-//   }
+   public function deleteList(array $params = array()) {
+      $this->validateParams($params, array("wordListId"), __FUNCTION__);
+      $this->ensureAuthentic();
+//      $params["auth_token"] = $this->auth_info->token;
+      $wordListId = $this->popKey($params, "wordListId");
+      
+      return $this->callApi('/wordList.json/' . $wordListId, $params, 'delete');
+   }
 
    /*
     * Delete a word from the given list
@@ -530,14 +508,34 @@ class Wordnik {
     *   list_permalink : the list's permalink id
     */
 
-//   public function deleteWordFromList($wordstring, $list_permalink) {
-//      $this->ensureAuthentic();
-//      $params = array();
-//      $params['wordstring'] = $wordstring;
-//      $param_container = array();
-//      $param_container[] = $params;
-//      return $this->callApi('/wordList.json/' . $list_permalink . '/deleteWords', $param_container, 'post');
-//   }
+   /**
+    *
+    * @param array $params
+    *    keys:
+    *       wordListId  - required (permalink)
+    * @return none 
+    */
+   public function updateList(array $params = array()) {
+      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
+      $this->ensureAuthentic();
+      $wordListId = $this->popKey($params, "wordListId");
+//      $params['auth_token'] = $this->auth_info->token;
+      $words = $this->popKey($params, "words");
+      $request_body = $this->makeRequestBody($words);
+
+      return $this->callApi('/wordList.json/' . $wordListId, $params, 'put', $request_body);
+   }
+   
+   private function makeRequestBody(array $words = array()) {
+      $request_body = array();
+      foreach ($words as $word) {
+         $obj = new stdClass;
+         $obj->word = $word;
+         $request_body[] = $obj;
+      }
+      
+      return $request_body;
+   }
 
    private function popKey(array &$params, $key) {
       $value = $params[$key];
@@ -548,7 +546,7 @@ class Wordnik {
    
    private function validateParams(array $params, array $required, $func_name) {
       foreach($required as $key) {
-         if (!isset($params[$key]) || trim($params[$key]) == '') {
+         if (!isset($params[$key]) || (!is_array($params[$key]) && trim($params[$key]) == '')) {
             throw new InvalidArgumentException("$func_name expects $key to be a string");
          }
       }
@@ -559,34 +557,56 @@ class Wordnik {
     * This presumes you want JSON back; could be adapted for XML pretty easily.
     */
 
-   private function callApi($url, $params=array(), $method='get') {
+   private function callApi($url, array $params=array(), $method='get', array $request_body=array()) {
       $data = null;
 
       $headers = array();
       $headers[] = "Content-type: application/json";
       $headers[] = "api_key: " . $this->api_key;
-      if (isset($this->auth_token)) {
-         $headers[] = "auth_token: " . $this->auth_token;
+      if (isset($this->auth_info->token)) {
+         $headers[] = "auth_token: " . $this->auth_info->token;
       }
 
       $url = (self::BASE_URI . $url);
 
       $curl = curl_init();
-      curl_setopt($curl, CURLOPT_TIMEOUT, 5); // 5 second timeout
+      $timeout = 10;
+      curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
       curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); // return the result on success, rather than just TRUE
       curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
-      if ($method == 'get' && !empty($params)) { // set query params if method is get
+      if (!empty($params)) {
          $url = ($url . '?' . http_build_query($params));
-      } else if ($method == 'post') { // set post data if the method is post
+      }
+      
+      $method = strtoupper($method);
+      $encoded_body = json_encode($request_body);
+      if ($method == 'POST') {
+         curl_setopt($curl, CURLOPT_POSTFIELDS, $encoded_body);
          curl_setopt($curl, CURLOPT_POST, true);
-         curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
-      } else if ($method == 'delete') { // set post data if the method is post
-         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-         curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
+      }
+      if (!in_array($method, array('POST','GET'))) {
+         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+      }
+      if ($method == 'PUT') {
+         $fp = fopen('php://temp/maxmemory:256000', 'w');
+         if(!fp) {
+            throw new Exception("Could not create file for PUT request");
+         }
+         fwrite($fp,$encoded_body);
+         fseek($fp, 0);
+         
+         $options = array(
+             CURLOPT_BINARYTRANSFER => true,
+             CURLOPT_INFILE => $fp,
+             CURLOPT_INFILESIZE => strlen($encoded_body)
+         );
+         curl_setopt_array($curl, $options);
       }
 
       curl_setopt($curl, CURLOPT_URL, $url);
+
+//      curl_setopt($curl, CURLINFO_HEADER_OUT, true);
 
       // make the request
       $response = curl_exec($curl);
@@ -594,7 +614,7 @@ class Wordnik {
 
       // handle the response based on the http code
       if ($response_info['http_code'] == 0) {
-         throw new Exception("TIMEOUT: api call to " . $url . " took more than 5s to return");
+         throw new Exception("TIMEOUT: api call to " . $url . " took more than {$timeout}s to return");
       } else if ($response_info['http_code'] == 200) {
          $data = json_decode($response);
       } else if ($response_info['http_code'] == 401) {
