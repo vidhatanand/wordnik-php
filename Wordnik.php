@@ -72,24 +72,38 @@ class Wordnik {
     *    keys:
     *       username - required
     *       password - required
-    * @return String
+    * @return Object
     */
    public function authenticate(array $params = array()) {
       $this->validateParams($params, array("username", "password"), __FUNCTION__);
       $username = $this->popKey($params, "username");
 
-      $this->auth_info = $this->callApi('/account.json/authenticate/' . urlencode($username), $params);
+      $this->auth_info = $this->callApi('/account.json/authenticate/' . rawurlencode($username), $params);
+      
+      return $this->auth_info;
+   }
+   
+   /**
+    * More info: http://developer.wordnik.com/docs#!/account/authenticate_post
+    * @param array $params
+    *    keys:
+    *       username - required
+    *       password - required
+    * @return Object
+    */
+   public function authenticatePost(array $params = array()) {
+      $this->validateParams($params, array("username", "password"), __FUNCTION__);
+      $username = $this->popKey($params, "username");
+      $request_body = $this->popKey($params, "password");
+      
+      $this->auth_info = $this->callApi('/account.json/authenticate/' . rawurlencode($username), $params, 'post', $request_body);
       
       return $this->auth_info;
    }
 
-   /*
-    * Get all of the authenticated user's lists.
-    * Note: you must call getAuthToken before calling this.
-    * More info: http://docs.wordnik.com/api/methods#lists
-    */
-
    /**
+    * Get all of the authenticated user's lists.
+    * Note: you must call authenticate before calling this.
     * More info: http://developer.wordnik.com/docs#!/account/get_word_lists_for_current_user
     * @param array $params
     *    keys:
@@ -99,14 +113,12 @@ class Wordnik {
     */
    public function getWordLists(array $params = array()) {
       $this->ensureAuthentic();
-//      $params['api_key'] = $this->api_key;
-//      $params['auth_token'] = $this->auth_info->token;
       
       return $this->callApi('/account.json/wordLists', $params);
    }
 
    /**
-    *
+    * More info: http://developer.wordnik.com/docs#!/account/get_api_token_status
     * @param array $params
     * @return Object 
     */
@@ -116,17 +128,21 @@ class Wordnik {
       return $this->callApi('/account.json/apiTokenStatus', $params);
    }
    
+   /**
+    * Note: you must call authenticate before calling this.
+    * More info: http://developer.wordnik.com/docs#!/account/get_logged_in_user
+    * @param array $params
+    * @return type 
+    */
    public function getUser(array $params = array()) {
       $this->ensureAuthentic();
-//      $params['api_key'] = $this->api_key;
-//      $params['auth_token'] = $this->auth_info->token;
       
       return $this->callApi('/account.json/user', $params);
    }
    
    /*
     * Ensures that this instance of Wordnik has been authenticated.
-    * (See getAuthToken)
+    * (See authenticate)
     */
    private function ensureAuthentic() {
       if (!isset($this->auth_info)) {
@@ -422,7 +438,42 @@ class Wordnik {
  ********************/
    
    /**
+    * Note: you must call authenticate before calling this.
+    * More info: http://developer.wordnik.com/docs#!/wordList/delete_word_list
+    * @param array $params
+    *    keys:
+    *       wordListId  - required (permalink)
+    * @return none 
+    */
+   public function updateList(array $params = array()) {
+      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
+      $this->ensureAuthentic();
+      $wordListId = $this->popKey($params, "wordListId");
+      $words = $this->popKey($params, "words");
+      $request_body = $this->makeRequestBody($words);
+
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId), $params, 'put', $request_body);
+   }
+   
+   /**
+    * Note: you must call authenticate before calling this.
+    * More info: http://developer.wordnik.com/docs#!/wordList/delete_word_list
+    * @param array $params
+    *    keys:
+    *       wordListId  - required (permalink)
+    * @return none 
+    */
+   public function deleteList(array $params = array()) {
+      $this->validateParams($params, array("wordListId"), __FUNCTION__);
+      $this->ensureAuthentic();
+      $wordListId = $this->popKey($params, "wordListId");
+      
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId), $params, 'delete');
+   }
+
+   /**
     * Fetches a wordlist by ID (permalink)
+    * Note: you must call authenticate before calling this.
     * More info: http://developer.wordnik.com/docs#!/wordList/get_word_list_by_id
     * @param array $params
     *    keys:
@@ -432,40 +483,13 @@ class Wordnik {
    public function getWordList(array $params = array()) {
       $this->validateParams($params, array("wordListId"), __FUNCTION__);
       $this->ensureAuthentic();
-//      $params['auth_token'] = $this->auth_info->token;
       $wordListId = $this->popKey($params, "wordListId");
       
-      return $this->callApi('/wordList.json/' . $wordListId, $params);
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId), $params);
    }
    
    /**
-    * Fetches words in a wordlist
-    * More info: http://developer.wordnik.com/docs#!/wordList/get_word_list_words
-    * @param array $params
-    *    keys:
-    *       wordListId  - required (permalink)
-    *       sortBy      - default: "createDate"
-    *       sortOrder   - default: "desc"
-    *       skip
-    *       limit
-    * @return type 
-    */
-   public function getWordListWords(array $params = array("sortBy"=>"createDate", "sortOrder"=>"desc")) {
-      $this->validateParams($params, array("wordListId"), __FUNCTION__);
-      if (!isset($params['sortBy']) || trim($params['sortBy']) == '') {
-         $params['sortBy'] = 'createDate';
-      }
-      if (!isset($params['sortOrder']) || trim($params['sortOrder']) == '') {
-         $params['sortOrder'] = 'desc';
-      }
-      $this->ensureAuthentic();
-//      $params['auth_token'] = $this->auth_info->token;
-      $wordListId = $this->popKey($params, "wordListId");
-      
-      return $this->callApi('/wordList.json/' . $wordListId . '/words', $params);
-   }
-   
-   /**
+    * Note: you must call authenticate before calling this.
     * More info: http://developer.wordnik.com/docs#!/wordList/add_words_to_word_list
     * @param array $params
     *    keys:
@@ -477,53 +501,56 @@ class Wordnik {
       $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
       $this->ensureAuthentic();
       $wordListId = $this->popKey($params, "wordListId");
-//      $params['auth_token'] = $this->auth_info->token;
       $words = $this->popKey($params, "words");
       $request_body = $this->makeRequestBody($words);
 
-      return $this->callApi('/wordList.json/' . $wordListId . '/words', $params, 'post', $request_body);
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId) . '/words', $params, 'post', $request_body);
    }
 
    /**
-    * More info: http://developer.wordnik.com/docs#!/wordList/delete_word_list
+    * Fetches words in a wordlist
+    * Note: you must call authenticate before calling this.
+    * More info: http://developer.wordnik.com/docs#!/wordList/get_word_list_words
     * @param array $params
     *    keys:
     *       wordListId  - required (permalink)
-    * @return none 
+    *       sortBy      - default: "createDate"
+    *       sortOrder   - default: "desc"
+    *       skip
+    *       limit
+    * @return Object 
     */
-   public function deleteList(array $params = array()) {
+   public function getWordListWords(array $params = array("sortBy"=>"createDate", "sortOrder"=>"desc")) {
       $this->validateParams($params, array("wordListId"), __FUNCTION__);
+      if (!isset($params['sortBy']) || trim($params['sortBy']) == '') {
+         $params['sortBy'] = 'createDate';
+      }
+      if (!isset($params['sortOrder']) || trim($params['sortOrder']) == '') {
+         $params['sortOrder'] = 'desc';
+      }
       $this->ensureAuthentic();
-//      $params["auth_token"] = $this->auth_info->token;
       $wordListId = $this->popKey($params, "wordListId");
       
-      return $this->callApi('/wordList.json/' . $wordListId, $params, 'delete');
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId) . '/words', $params);
    }
-
-   /*
-    * Delete a word from the given list
-    * Note: you must call getAuthToken before calling this.
-    * Required params:
-    *   wordstring : the word to delete from the list
-    *   list_permalink : the list's permalink id
-    */
-
+   
    /**
-    *
+    * Note: you must call authenticate before calling this.
+    * More info: http://developer.wordnik.com/docs#!/wordList/delete_words_from_word_list
     * @param array $params
     *    keys:
     *       wordListId  - required (permalink)
-    * @return none 
+    *       words       - required (array of words)
+    * @return Object 
     */
-   public function updateList(array $params = array()) {
-      $this->validateParams($params, array("wordListId", "words"), __FUNCTION__);
+   public function deleteWords(array $params = array()) {
+      $this->validateParams($params, array("wordListId"), __FUNCTION__);
       $this->ensureAuthentic();
       $wordListId = $this->popKey($params, "wordListId");
-//      $params['auth_token'] = $this->auth_info->token;
       $words = $this->popKey($params, "words");
       $request_body = $this->makeRequestBody($words);
-
-      return $this->callApi('/wordList.json/' . $wordListId, $params, 'put', $request_body);
+      
+      return $this->callApi('/wordList.json/' . rawurlencode($wordListId) . '/deleteWords', $params, 'POST', $request_body);
    }
    
    private function makeRequestBody(array $words = array()) {
@@ -557,7 +584,7 @@ class Wordnik {
     * This presumes you want JSON back; could be adapted for XML pretty easily.
     */
 
-   private function callApi($url, array $params=array(), $method='get', array $request_body=array()) {
+   private function callApi($url, array $params = array(), $method='get', $request_body = array()) {
       $data = null;
 
       $headers = array();
@@ -580,7 +607,7 @@ class Wordnik {
       }
       
       $method = strtoupper($method);
-      $encoded_body = json_encode($request_body);
+      $encoded_body = (is_array($request_body)) ? json_encode($request_body) : $request_body;
       if ($method == 'POST') {
          curl_setopt($curl, CURLOPT_POSTFIELDS, $encoded_body);
          curl_setopt($curl, CURLOPT_POST, true);
@@ -606,7 +633,7 @@ class Wordnik {
 
       curl_setopt($curl, CURLOPT_URL, $url);
 
-//      curl_setopt($curl, CURLINFO_HEADER_OUT, true);
+      curl_setopt($curl, CURLINFO_HEADER_OUT, true);
 
       // make the request
       $response = curl_exec($curl);
@@ -617,7 +644,7 @@ class Wordnik {
          throw new Exception("TIMEOUT: api call to " . $url . " took more than {$timeout}s to return");
       } else if ($response_info['http_code'] == 200) {
          $data = json_decode($response);
-      } else if ($response_info['http_code'] == 401) {
+      } else if ($response_info['http_code'] == 401 || $response_info['http_code'] == 403) {
          throw new Exception("Unauthorized API request to " . $url . ": " . json_decode($response)->message);
       } else if ($response_info['http_code'] == 404) {
          $data = null;
