@@ -224,7 +224,7 @@ class Wordnik {
       $this->validateParams($params, array("word"), __FUNCTION__);
       $word = $this->popKey($params, "word");
       
-      return $this->callApi('/word.json/' . rawurlencode($word) . '/topExammple', $params);
+      return $this->callApi('/word.json/' . rawurlencode($word) . '/topExample', $params);
    }
 
    /**
@@ -258,8 +258,23 @@ class Wordnik {
    public function getHyphenation(array $params = array()) {
       $this->validateParams($params, array("word"), __FUNCTION__);
       $word = $this->popKey($params, "word");
-      
+
       return $this->callApi('/word.json/' . rawurlencode($word) . '/hyphenation', $params);
+   }
+
+   /**
+    * More info: http://developer.wordnik.com/docs#!/word/get_etymologies
+    * @param array $params
+    *    keys:
+    *       word              - required
+    *       useCanonical
+    * @return xml 
+    */
+   public function getEtymologies(array $params = array()) {
+      $this->validateParams($params, array("word"), __FUNCTION__);
+      $word = $this->popKey($params, "word");
+      
+      return $this->callApi('/word.json/' . rawurlencode($word) . '/etymologies', $params);
    }
 
    /**
@@ -312,7 +327,7 @@ class Wordnik {
       $this->validateParams($params, array("word"), __FUNCTION__);
       $word = $this->popKey($params, "word");
 
-      return $this->callApi('/word.json/' . rawurlencode($word) . '/related', $params);
+      return $this->callApi('/word.json/' . rawurlencode($word) . '/relatedWords', $params);
    }
    
    /**
@@ -602,7 +617,7 @@ class Wordnik {
       if (!empty($params)) {
          $url = ($url . '?' . http_build_query($params));
       }
-      
+    
       $method = strtoupper($method);
       $encoded_body = (is_array($request_body) || is_object($request_body)) ? json_encode($request_body) : $request_body;
 
